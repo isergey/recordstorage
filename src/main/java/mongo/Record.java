@@ -2,6 +2,8 @@ package mongo;
 
 import com.mongodb.BasicDBObject;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 public class Record {
@@ -14,7 +16,13 @@ public class Record {
     Date createDate;
     Date updateDate;
     String duplicateKey;
-    boolean deleted;
+    String hash;
+    boolean deleted = false;
+
+
+    public Record(String id) {
+        this.id = id;
+    }
 
     public String getId() {
         return id;
@@ -88,6 +96,27 @@ public class Record {
         this.duplicateKey = duplicateKey;
     }
 
+    public String getHash() {
+        String original = getContent();
+        MessageDigest md = null;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        md.update(original.getBytes());
+        byte[] digest = md.digest();
+        StringBuffer sb = new StringBuffer();
+        for (byte b : digest) {
+            sb.append(String.format("%02x", b & 0xff));
+        }
+        return sb.toString();
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
+
     public boolean isDeleted() {
         return deleted;
     }
@@ -96,17 +125,20 @@ public class Record {
         this.deleted = deleted;
     }
 
-    public BasicDBObject toBasicDBObject() {
-        BasicDBObject dbRecord = new BasicDBObject("id", getId()).
-                append("originalId", getOriginalId()).
-                append("source", getSource()).
-                append("format", getFormat()).
-                append("schema", getSchema()).
-                append("content", getContent()).
-                append("createDate", getCreateDate()).
-                append("updateDate", getUpdateDate()).
-                append("duplicateKey", getDuplicateKey()).
-                append("deleted", isDeleted());
-        return dbRecord;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Record record = (Record) o;
+
+        if (!id.equals(record.id)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
     }
 }
